@@ -1,2 +1,4 @@
-###PokerStar 2000
+# PokerStar 2000
+
+World's best pokerbot.
 
