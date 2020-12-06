@@ -1,0 +1,45 @@
+18:22:31:INFO:
+
+18:22:31:INFO:Joining new board: None
+18:22:47:INFO:
+
+18:22:47:INFO:Joining new board: None
+18:22:48:DEBUG:STREAM b'IHDR' 16 13
+18:22:48:DEBUG:STREAM b'IDAT' 41 65536
+18:22:48:INFO:Main player name: HDNOAN
+18:23:41:INFO:
+
+18:23:41:INFO:Joining new board: None
+18:23:41:DEBUG:STREAM b'IHDR' 16 13
+18:23:41:DEBUG:STREAM b'IDAT' 41 65536
+18:23:41:INFO:Main player name: HDNOAN
+18:23:42:INFO:Pott tesseract: Pot: $0.41
+18:23:42:INFO:Number of open cards: 4
+18:23:42:INFO:Open cards on table: [<algo.Card object at 0x148d72b80>, <algo.Card object at 0x148d84820>, <algo.Card object at 0x148e357f0>, <algo.Card object at 0x148e8f160>]
+18:23:42:INFO:Main player balance: $0.60
+18:23:42:INFO:Main player cards: [<algo.Card object at 0x1493daac0>, <algo.Card object at 0x1493e3b20>]
+18:23:42:INFO:Opponent 1 name string tesseract: bobwin2
+18:23:42:INFO:Opponent 1 name: bobwin2
+18:23:42:INFO:Opponent 1 balance string tesseract: $2.75
+18:23:42:INFO:Opponent 1 balance: 2.75
+18:23:42:INFO:Opponent 1 have folded: True
+18:23:42:INFO:Opponent 2 name string tesseract: steveng76800
+18:23:42:INFO:Opponent 2 name: steveng76800
+18:23:43:INFO:Opponent 2 balance string tesseract: $1.60
+18:23:43:INFO:Opponent 2 balance: 1.60
+18:23:43:INFO:Opponent 2 have folded: False
+18:23:43:INFO:Opponent 3 name string tesseract: m.s.irkutsk
+18:23:43:INFO:Opponent 3 name: m.s.irkutsk
+18:23:43:INFO:Opponent 3 balance string tesseract: $4.37
+18:23:43:INFO:Opponent 3 balance: 4.37
+18:23:43:INFO:Opponent 3 have folded: True
+18:23:43:INFO:Opponent 4 name string tesseract: goforthewin1
+18:23:43:INFO:Opponent 4 name: goforthewin1
+18:23:43:INFO:Opponent 4 balance string tesseract: $2.48
+18:23:43:INFO:Opponent 4 balance: 2.48
+18:23:43:INFO:Opponent 4 have folded: True
+18:23:43:INFO:Opponent 5 name string tesseract: fex4898
+18:23:43:INFO:Opponent 5 name: fex4898
+18:23:43:INFO:Opponent 5 balance string tesseract: $2
+18:23:43:INFO:Opponent 5 balance: 2
+18:23:43:INFO:Opponent 5 have folded: True
