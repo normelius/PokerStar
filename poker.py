@@ -139,7 +139,7 @@ class Board():
         self.open_cards = []
 
 
-    def _number_open_cards(self):
+    def number_open_cards(self):
         """ 
         Get number of open cards on the table. This only
         accounts for 1-5 open cards, not when multiple more are shown.
@@ -163,7 +163,7 @@ class Board():
         """
         Updates the open cards on the table.
         """
-        number_open_cards = self._number_open_cards()
+        number_open_cards = self.number_open_cards()
         c1 = self.image[390:440, 525:565][np.newaxis, ...]
         c2 = self.image[390:440, 618:658][np.newaxis, ...]
         c3 = self.image[390:440, 711:751][np.newaxis, ...]
@@ -180,42 +180,6 @@ class Board():
 
         logging.info("Open cards on table: {}".format(self.open_cards))
 
-        """
-        im1 = Image.fromarray(c1)
-        im2 = Image.fromarray(c2)
-        im3 = Image.fromarray(c3)
-        im4 = Image.fromarray(c4)
-        im5 = Image.fromarray(c5)
-        r1 = np.random.randint(1000000)
-        r2 = np.random.randint(1000000)
-        r3 = np.random.randint(1000000)
-        r4 = np.random.randint(1000000)
-        r5 = np.random.randint(1000000)
-        im1.save("model/data_bigtable_unsorted/" + str(r1) + ".jpeg")
-        im2.save("model/data_bigtable_unsorted/" + str(r2) + ".jpeg")
-        im3.save("model/data_bigtable_unsorted/" + str(r3) + ".jpeg")
-        im4.save("model/data_bigtable_unsorted/" + str(r4) + ".jpeg")
-        im5.save("model/data_bigtable_unsorted/" + str(r5) + ".jpeg")
-        """
-
-        # Small table
-        """
-        self.update_open_cards()
-
-        image_height = self.image.shape[0]
-        image_width = self.image.shape[1]
-        hr = np.array([0.36532951, 0.48710602])
-        wr = np.array([0.33578947, 0.39894737])
-        h = np.rint(image_height * hr).astype(int)
-        w = np.rint(image_width * wr).astype(int)
-
-        c1 = self.image[h[0]:h[1], w[0]:w[1]]
-        c2 = self.image[h[0]:h[1], 382:382+60]
-        c3 = self.image[h[0]:h[1], 386+60:386+(60*2)]
-        c4 = self.image[h[0]:h[1], 390+(60*2):390+(60*3)]
-        c5 = self.image[h[0]:h[1], 394+(60*3):394+(60*4)]
-
-        """
 
     def _update_pott(self):
         """
@@ -234,6 +198,7 @@ class Board():
 
         except:
             logging.exception("")
+
 
     def _get_pid(self):
         options = kCGWindowListOptionOnScreenOnly
@@ -523,6 +488,7 @@ class Opponent():
 def start_game(board):
     algo = Algo()
     updated = False
+
     while (not time.sleep(0.5)):
         board.get_board_image()
         if (board.player.action_needed()):
@@ -540,10 +506,10 @@ def main():
     #board = Board("Orthos")
     #start_game(board)
 
-    board = Board(pre_board = "board_large.png")
-    board.update_stats()
-    algo = Algo()
-    with timeit("Algo time:"):
+    with timeit():
+        board = Board(pre_board = "boards/board_large.png")
+        board.update_stats()
+        algo = Algo()
         algo.analyze(board)
 
 

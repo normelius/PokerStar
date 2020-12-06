@@ -90,18 +90,25 @@ class Card():
 class Algo():
     def __init__(self):
         colors = np.array(["H", "C", "S", "D"])
-        self.all_cards = np.array(sorted(([str(value) + color for color in colors for value
-            in range(2, 15)])))
+        self.all_cards = np.array(sorted(([str(value) + color for color 
+            in colors for value in range(2, 15)])))
         self.board = None
-        self.ranks = pd.read_csv('Algo/ranks.csv', sep = '\t', encoding = 'utf-8',
-            usecols = ["rank", "primes", "flush"])
-        self.number_of_ranks = self.ranks["rank"].iloc[-1]
+        self.ranks = pd.read_csv('Algo/ranks.csv', sep = '\t', 
+            encoding = 'utf-8', usecols = ["rank", "primes", "flush"])
         
 
     def analyze(self, board):
+        """
+        Update the algo with the latest board and analyze everything possible.
+        """
         self.board = board
-        print("Chens:", self._chens_formula())
-        self._check_hand()
+        if self.board.number_open_cards == 0:
+            print("Chens:", self._chens_formula())
+
+        best_hand = self._check_hand()
+        rank = self._check_rank(best_hand) 
+        rank_strength = self._check_rank_strength(rank)
+
     
     def _longest_consecutive(self, valors):
         """
@@ -155,7 +162,6 @@ class Algo():
     def _check_hand(self):
         """
         Check the current best possible hand available.
-        Ex: ['14H', '14S', '11D', '10C', '7C', '6S']
         """
         if self.board:
             cards = self.board.player.cards + self.board.open_cards
@@ -203,8 +209,8 @@ class Algo():
             self._display_best_hand("High card", hand)
        
         best_hand = self._create_best_hand(cards, hand)
-        rank = self._check_rank(best_hand, flush) 
-        rank_strength = self._check_rank_strength(rank)
+        return best_hand
+
     
     def _check_rank_strength(self, rank):
         """
@@ -235,7 +241,7 @@ class Algo():
         ranks = np.arange(7462, 0, -1)
         return round(np.count_nonzero(ranks <= rank) / len(ranks) * 100, 2)
 
-    def _check_rank(self, best_hand, is_flush):
+    def _check_rank(self, best_hand):
         """
         Checks what rank the current best hand have. All ranks are different
         except for the flushes, hence we check if the hand is a flush.
@@ -246,11 +252,6 @@ class Algo():
             A list representing the best hand, i.e., best five cards you
             currently have.
 
-        is_flush : bool
-            A boolean specify whether the best hand is a flush or not.
-            This is necessary since all ranks differ, except for the flushes,
-            which means the rank will be better if a hand also is a flush.
-
         Returns
         -------
         rank : int
@@ -259,25 +260,37 @@ class Algo():
         Examples
         --------
         >>> Algo()._check_rank([Card('14H'), Card('13H'), Card('12H'), 
-        ...     Card('11H'), Card('10H')], True)
+        ...     Card('11H'), Card('10H')])
         1
 
         >>> Algo()._check_rank([Card('12H'), Card('8H'), Card('5H'), 
-        ...     Card('3H'), Card('2H')], True)
+        ...     Card('3H'), Card('2H')])
         1337
 
         >>> Algo()._check_rank([Card('7H'), Card('7D'), Card('2C'), 
-        ...     Card('2H'), Card('3C')], False)
+        ...     Card('2H'), Card('3C')])
         3215
 
         """
         prime_product = self._prime_product(best_hand)
-        try:
+        if self._is_flush(best_hand):
             return self.ranks.loc[(self.ranks["primes"] == prime_product) &
-                (self.ranks["flush"] == is_flush)]["rank"].values[0]
+                (self.ranks["flush"] == True)]["rank"].values[0]
+        
+        return self.ranks.loc[(self.ranks["primes"] == prime_product) &
+                (self.ranks["flush"] == False)]["rank"].values[0]
 
-        except IndexError:
-            return None
+    
+    def _is_flush(self, best_hand):
+        """
+        Checks whether the best hand is a flush or not.
+        """
+        suits = [card.suit for card in best_hand]
+        flush_suit, count = zip(*Counter(suits).most_common(1))
+        if count[0] >= 5:
+            return True
+
+        return False
 
 
     def _prime_product(self, best_hand):
@@ -457,53 +470,18 @@ class Algo():
 
         return score
 
-    
-    def _card_statistic(self):
-        """
-        Computes card probabilities.
-        General info:
-        Binomial coefficient.
-        nCr = (n*(n-1)*n(n-2)*...*(n-r-1)) / r! = n! / r!(n-r)! = math.comb(n, r)
-        """
-        # Distinct 5 card poker hand.
-        self.five_card_combinations = comb(52, 5)
-        self.hand_combinations = {
-                "single": 1302540, 
-                "one pair": 1098240,
-                "two pair": 123552, 
-                "three kind": 54912, 
-                "straight": 10200,
-                "flush": 5108, 
-                "full house": 3744, 
-                "four kind": 624,
-                "straight flush": 40
-        }
-
-        self.hand_probabilities = {}
-        for key, value in self.hand_combinations.items():
-            self.hand_probabilities[key] = round(value / self.five_card_combinations, 6)
-        
-        comb_one_pair = comb(4, 2) * comb(13, 1)
-        comb_two_pairs = comb(13, 2) * comb(4, 2) * comb(4, 2)
-        comb_three = comb(4, 3) * comb(13, 1)
-        comb_four = comb(4, 4) * comb(13, 1)
-        comb_full_house = comb(4, 3) * comb(13, 1) * comb(4, 2) * comb(12, 1)
-        print(comb_one_pair)
-        print(comb_two_pairs)
-        print(comb_three)
-        print(comb_four)
-        print(comb_full_house)
-
-        print(combinations('123', 2))
-
 
 def main():
     import doctest
     doctest.testmod()
 
     algo = Algo()
+
     with timeit():
-        algo._check_hand()
+        best_hand = algo._check_hand()
+        rank = algo._check_rank(best_hand) 
+        rank_strength = algo._check_rank_strength(rank)
+        print(rank_strength)
 
 
 
