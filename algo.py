@@ -12,6 +12,8 @@ from numba import jit, njit
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+import telegram
+
 
 PRIMES = {
         2: 2,
@@ -102,12 +104,17 @@ class Algo():
         Update the algo with the latest board and analyze everything possible.
         """
         self.board = board
-        if self.board.number_open_cards == 0:
-            print("Chens:", self._chens_formula())
+        num_open_cards = self.board.number_open_cards()
 
-        best_hand = self._check_hand()
-        rank = self._check_rank(best_hand) 
-        rank_strength = self._check_rank_strength(rank)
+        # Chens is only useful with two cards.
+        if num_open_cards == 0:
+            telegram.preflop_msg(self._chens())
+        
+        if num_open_cards >= 3:
+            best_hand, hand_str = self._check_hand()
+            rank = self._check_rank(best_hand) 
+            rank_strength = self._check_rank_strength(rank)
+            telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
 
     
     def _longest_consecutive(self, valors):
@@ -152,11 +159,11 @@ class Algo():
 
 
     def _display_best_hand(self, hand_msg, hand = None):
-        print("Best hand:", hand_msg, end = " ")
-        for card in hand:
-            print(card, end = " ")
+        telegram
+        #print("Best hand:", hand_msg, end = " ")
+        #for card in hand:
+            #print(card, end = " ")
 
-        print("")
 
 
     def _check_hand(self):
@@ -176,40 +183,50 @@ class Algo():
         
         if hand := self._royal_straight_flush(cards):
             flush = True
-            self._display_best_hand("Royal straight flush", hand)
+            hand_str = "Royal straight flush"
+            #self._display_best_hand("Royal straight flush", hand)
 
         elif hand := self._straight_flush(cards):
             flush = True
+            hand_str = "Straight flush"
             self._display_best_hand("Straight flush", hand)
 
         elif hand := self._four_oak(cards):
+            hand_str = "Four of a kind"
             self._display_best_hand("Four of a kind", hand)
 
         elif hand := self._full_house(cards):
+            hand_str = "Full house"
             self._display_best_hand("Full house", hand)
         
         elif hand := self._flush(cards):
             flush = True
+            hand_str = "Flush"
             self._display_best_hand("Flush", hand)
     
         elif hand := self._straight(cards):
+            hand_str = "Straight"
             self._display_best_hand("Straight", hand)
         
         elif hand := self._three_oak(cards):
+            hand_str = "Three of a kind"
             self._display_best_hand("Three of a kind", hand)
 
         elif hand := self._two_pair(cards):
+            hand_str = "Two pair"
             self._display_best_hand("Two pair", hand)
 
         elif hand := self._pair(cards):
+            hand_str = "One pair"
             self._display_best_hand("One pair", hand)
 
         else:
             hand = [cards[0]]
+            hand_str = "High card"
             self._display_best_hand("High card", hand)
        
         best_hand = self._create_best_hand(cards, hand)
-        return best_hand
+        return best_hand, hand_str
 
     
     def _check_rank_strength(self, rank):
@@ -425,7 +442,7 @@ class Algo():
         return zip(*kinds.most_common(2))
 
 
-    def _chens_formula(self):
+    def _chens(self):
         """
         Implements Chen's formula, a way to rank starting hands. Algorithm:
         1. Score the highest card, A = 10, K = 8, Q = 7, J = 6, rest = value / 2.
@@ -478,10 +495,11 @@ def main():
     algo = Algo()
 
     with timeit():
-        best_hand = algo._check_hand()
+        telegram.preflop_msg(10.4)
+        best_hand, hand_str = algo._check_hand()
         rank = algo._check_rank(best_hand) 
         rank_strength = algo._check_rank_strength(rank)
-        print(rank_strength)
+        telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
 
 
 

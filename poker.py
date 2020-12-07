@@ -128,8 +128,8 @@ class Board():
         self.player.update_stats()
 
         # Update opponents stats
-        for opponent in self.opponents:
-            opponent.update_stats()
+        #for opponent in self.opponents:
+            #opponent.update_stats()
     
     def _clear_board(self):
         """
@@ -261,13 +261,13 @@ class MainPlayer():
         self.number = 1
         self.cards = np.array([])
 
-        self._update_name()
+        #self._update_name()
 
     def update_stats(self):
         """
         Helper function to call all other update methods.
         """
-        self._update_balance()
+        #self._update_balance()
         self._update_hand()
 
 
@@ -503,14 +503,14 @@ def start_game(board):
 
 
 def main():
-    #board = Board("Orthos")
-    #start_game(board)
+    board = Board("Harpalyke")
+    start_game(board)
 
-    with timeit():
-        board = Board(pre_board = "boards/board_large.png")
-        board.update_stats()
-        algo = Algo()
-        algo.analyze(board)
+    #with timeit():
+        #board = Board(pre_board = "boards/board_large.png")
+        #board.update_stats()
+        #algo = Algo()
+        #algo.analyze(board)
 
 
 
