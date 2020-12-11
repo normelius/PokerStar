@@ -1,4 +1,7 @@
 
+# Logging files
+logging/
+
 .python-version
 
 # HTML files
