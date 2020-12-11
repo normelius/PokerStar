@@ -14,7 +14,6 @@ from itertools import groupby, combinations
 import telegram
 
 
-
 PRIMES = {
         2: 2,
         3: 3,
@@ -106,18 +105,18 @@ class Algo():
         self.board = board
         num_open_cards = self.board.number_open_cards()
 
-        # Chens is only useful with two cards.
         if num_open_cards == 0:
             telegram.preflop_msg(self._chens())
         
         if num_open_cards >= 3:
-            best_hand, hand_str = self._check_hand()
+            all_cards = self.board.player.cards + self.board.open_cards
+            best_hand, hand_str = self._best_hand(all_cards)
             rank = self._check_rank(best_hand) 
             rank_strength = self._check_rank_strength(rank)
             telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
 
     
-    def _longest_consecutive(self, valors : list):
+    def _longest_consecutive(self, valors : list) -> list:
         """
         Finds the longest consecutive list of valors up to the five top, e.g.,
         [14, 14, 11, 10, 7, 6] will return [11, 10]
@@ -137,14 +136,15 @@ class Algo():
         >>> Algo()._longest_consecutive([13, 12, 11, 10])
         [13, 12, 11, 10]
 
-        >>> Algo()._longest_consecutive([14, 14, 12, 13, 7, 10, 11])
-        [14, 13, 12, 11, 10]
+        >>> Algo()._longest_consecutive([14, 14, 13, 12, 5, 2])
+        [14, 13, 12]
         """
 
         # Drop duplicates since it messes up grouping below. We are only 
         # interested in consecutive integers, don't need duplicates.
         valors = sorted(list(dict.fromkeys(valors)))
         vals = []
+
         for k, g in groupby(enumerate(valors), lambda ix : ix[0] - ix[1]):
             vals.append(list(map(itemgetter(1), g)))
         
@@ -158,7 +158,7 @@ class Algo():
         return consecutive
 
 
-    def _check_hand(self):
+    def _best_hand(self, cards : list) -> (list, str):
         """
         Check the current best possible hand available by comparing the users
         current hand and all cards at the table, compared to all possible hands.
@@ -166,6 +166,12 @@ class Algo():
         The idea is that each valor have a different prime number associated
         to it, meaning the hands product will always be different, except 
         for flushes.
+        
+        Parameters
+        ----------
+        cards : list
+            A list containing all cards to be used. It contains both the open
+            cards at the table and the players cards.
 
         Returns
         -------
@@ -173,14 +179,21 @@ class Algo():
             A list containing the best five cards available right now.
         hand_str : str
             String containing a message corresponding to the best hand.
+
+        Exampes
+        -------
+        >>> Algo()._best_hand([Card('2H'), Card('3H'), Card('3D'), Card('10D'),
+        ...     Card('12C')])
+        ([3H, 3D, 12C, 10D, 2H], 'One pair')
+
+        >>> Algo()._best_hand([Card('12H'), Card('12C'), Card('14H'), Card('14C'),
+        ...     Card('5S')])
+        ([14H, 14C, 12H, 12C, 5S], 'Two pair')
+
+        >>> Algo()._best_hand([Card('12H'), Card('11H'), Card('9H'), Card('8H'),
+        ...     Card('10H'), Card('4H'), Card('2S')])
+        ([12H, 11H, 10H, 9H, 8H], 'Straight flush')
         """
-
-        if self.board:
-            cards = self.board.player.cards + self.board.open_cards
-
-        else:
-            cards = [Card("14H"), Card("13H"), Card("12H"), Card("11H"),
-                    Card("10H"), Card("10C"), Card("13C")]
         
         # Sort in decreasing order, so strongest first.
         cards.sort(key = lambda x: x.valor, reverse = True)
@@ -193,41 +206,32 @@ class Algo():
         elif hand := self._straight_flush(cards):
             flush = True
             hand_str = "Straight flush"
-            self._display_best_hand("Straight flush", hand)
 
         elif hand := self._four_oak(cards):
             hand_str = "Four of a kind"
-            self._display_best_hand("Four of a kind", hand)
 
         elif hand := self._full_house(cards):
             hand_str = "Full house"
-            self._display_best_hand("Full house", hand)
         
         elif hand := self._flush(cards):
             flush = True
             hand_str = "Flush"
-            self._display_best_hand("Flush", hand)
     
         elif hand := self._straight(cards):
             hand_str = "Straight"
-            self._display_best_hand("Straight", hand)
         
         elif hand := self._three_oak(cards):
             hand_str = "Three of a kind"
-            self._display_best_hand("Three of a kind", hand)
 
         elif hand := self._two_pair(cards):
             hand_str = "Two pair"
-            self._display_best_hand("Two pair", hand)
 
         elif hand := self._pair(cards):
             hand_str = "One pair"
-            self._display_best_hand("One pair", hand)
 
         else:
             hand = [cards[0]]
             hand_str = "High card"
-            self._display_best_hand("High card", hand)
        
         best_hand = self._create_best_hand(cards, hand)
         return best_hand, hand_str
@@ -601,10 +605,12 @@ def main():
     algo = Algo()
 
     with timeit():
-        best_hand, hand_str = algo._check_hand()
+        cards = [Card("14H"), Card("13H"), Card("12H"), Card("11H"),
+            Card("10H"), Card("10C"), Card("13C")]
+        best_hand, hand_str = algo._best_hand(cards)
         rank = algo._check_rank(best_hand) 
         rank_strength = algo._check_rank_strength(rank)
-        telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
+        #telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
 
 
 
