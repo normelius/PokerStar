@@ -1,5 +1,7 @@
 
 
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 from math import comb
@@ -8,11 +10,9 @@ from operator import attrgetter, itemgetter
 import time
 from collections import Counter
 from itertools import groupby, combinations
-from numba import jit, njit
-import pyarrow as pa
-import pyarrow.parquet as pq
 
 import telegram
+
 
 
 PRIMES = {
@@ -40,7 +40,7 @@ def timeit(title = ""):
 
 
 class Card():
-    def __init__(self, card_string):
+    def __init__(self, card_string : str):
         self.valor =  int(''.join(x for x in card_string if x.isdigit()))
         self.suit = card_string[-1]
         self.prime = PRIMES[self.valor]
@@ -51,7 +51,7 @@ class Card():
     def __repr__(self):
         return self.card_string()
 
-    def __eq__(self, obj):
+    def __eq__(self, obj : Card):
         if self.valor == obj.valor:
             return True
 
@@ -117,7 +117,7 @@ class Algo():
             telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
 
     
-    def _longest_consecutive(self, valors):
+    def _longest_consecutive(self, valors : list):
         """
         Finds the longest consecutive list of valors up to the five top, e.g.,
         [14, 14, 11, 10, 7, 6] will return [11, 10]
@@ -158,18 +158,23 @@ class Algo():
         return consecutive
 
 
-    def _display_best_hand(self, hand_msg, hand = None):
-        telegram
-        #print("Best hand:", hand_msg, end = " ")
-        #for card in hand:
-            #print(card, end = " ")
-
-
-
     def _check_hand(self):
         """
-        Check the current best possible hand available.
+        Check the current best possible hand available by comparing the users
+        current hand and all cards at the table, compared to all possible hands.
+        It uses two different hashtables, one for non-flush and one for flush.
+        The idea is that each valor have a different prime number associated
+        to it, meaning the hands product will always be different, except 
+        for flushes.
+
+        Returns
+        -------
+        hand : list
+            A list containing the best five cards available right now.
+        hand_str : str
+            String containing a message corresponding to the best hand.
         """
+
         if self.board:
             cards = self.board.player.cards + self.board.open_cards
 
@@ -184,7 +189,6 @@ class Algo():
         if hand := self._royal_straight_flush(cards):
             flush = True
             hand_str = "Royal straight flush"
-            #self._display_best_hand("Royal straight flush", hand)
 
         elif hand := self._straight_flush(cards):
             flush = True
@@ -229,7 +233,7 @@ class Algo():
         return best_hand, hand_str
 
     
-    def _check_rank_strength(self, rank):
+    def _check_rank_strength(self, rank : int):
         """
         Checks the rank strength by calculating the percentile.
         A percentile of example '80%' means that the rank is better than
@@ -258,7 +262,7 @@ class Algo():
         ranks = np.arange(7462, 0, -1)
         return round(np.count_nonzero(ranks <= rank) / len(ranks) * 100, 2)
 
-    def _check_rank(self, best_hand):
+    def _check_rank(self, best_hand : list):
         """
         Checks what rank the current best hand have. All ranks are different
         except for the flushes, hence we check if the hand is a flush.
@@ -298,10 +302,23 @@ class Algo():
                 (self.ranks["flush"] == False)]["rank"].values[0]
 
     
-    def _is_flush(self, best_hand):
+    def _is_flush(self, best_hand : list):
         """
-        Checks whether the best hand is a flush or not.
+        Checks whether the best hand is a flush or not. It uses Counter
+        to get the most common suit, if 5 or over, we know the best hand
+        is a flush.
+
+        Parameters
+        ----------
+        best_hand : list
+            A list containing the best hand the user currently have.
+
+        Returns
+        -------
+        bool
+            True if flush has been found, False otherwise.
         """
+
         suits = [card.suit for card in best_hand]
         flush_suit, count = zip(*Counter(suits).most_common(1))
         if count[0] >= 5:
@@ -310,7 +327,7 @@ class Algo():
         return False
 
 
-    def _prime_product(self, best_hand):
+    def _prime_product(self, best_hand : list):
         """
         Calculates the prime product of the best hand.
 
@@ -340,10 +357,12 @@ class Algo():
         return prime_product
 
 
-    def _create_best_hand(self, cards, hand):
+    def _create_best_hand(self, cards : list, hand : list) -> list:
         """
         Creates the best possible hand based on what you currently have
-        and all the cards available.
+        and all the cards available. Observe that this assumes 'cards' param
+        are sorted, since hand already containg e.g., pairs, this method
+        adds the remaining best cards.
 
         Parameters
         ----------
@@ -376,12 +395,30 @@ class Algo():
 
 
     def _royal_straight_flush(self, cards):
+        """
+        Checks if a royal straight flush exist.
+
+        Examples
+        --------
+        >>> Algo()._royal_straight_flush([Card("14H"), Card("13H"), Card("12H"), Card("11H"), 
+        ...     Card("10H")])
+        [14H, 13H, 12H, 11H, 10H]
+        """
         if hand := self._straight_flush(cards):
             if hand[0].valor == 14:
                 return hand
 
 
     def _straight_flush(self, cards):
+        """
+        Checks if a straight flush exist.
+
+        Examples
+        --------
+        >>> Algo()._straight_flush([Card("6H"), Card("5H"), Card("4H"), Card("3H"), 
+        ...     Card("2H")])
+        [6H, 5H, 4H, 3H, 2H]
+        """
         suits = [card.suit for card in cards]
         valors = [card.valor for card in cards]
         flush_suit, suit_count = zip(*Counter(suits).most_common(1))
@@ -391,6 +428,15 @@ class Algo():
                 and card.valor in consecutive_valors)]
 
     def _flush(self, cards):
+        """
+        Checks if a flush exist.
+
+        Examples
+        --------
+        >>> Algo()._flush([Card("7H"), Card("5H"), Card("4H"), Card("3H"), 
+        ...     Card("2H")])
+        [7H, 5H, 4H, 3H, 2H]
+        """
         suits = [card.suit for card in cards]
         flush_suit, count = zip(*Counter(suits).most_common(1))
         if count[0] >= 5:
@@ -398,6 +444,15 @@ class Algo():
 
 
     def _straight(self, cards):
+        """
+        Checks if a straight exist.
+
+        Examples
+        --------
+        >>> Algo()._straight([Card("7H"), Card("6D"), Card("5S"), Card("4C"), 
+        ...     Card("3H")])
+        [7H, 6D, 5S, 4C, 3H]
+        """
         valors = [card.valor for card in cards]
         consecutive_valors = self._longest_consecutive(valors)
         if len(consecutive_valors) >= 5:
@@ -407,39 +462,90 @@ class Algo():
                 consecutive_valors and card.suit in consecutive_suits)]
 
     def _full_house(self, cards):
+        """
+        Checks if a full house kind exist.
+
+        Examples
+        --------
+        >>> Algo()._full_house([Card("14H"), Card("14D"), Card("6D"), Card("6H"), 
+        ...     Card("6C")])
+        [14H, 14D, 6D, 6H, 6C]
+        """
         common, count = self._most_common(cards)
         if count == (3, 2):
             return [card for card in cards if (card.valor == common[0] or
                     card.valor == common[1])]
 
     def _four_oak(self, cards):
+        """
+        Checks if four of a kind exist.
+
+        Examples
+        --------
+        >>> Algo()._four_oak([Card("14H"), Card("6S"), Card("6D"), Card("6H"), 
+        ...     Card("6C")])
+        [6S, 6D, 6H, 6C]
+        """
         common, count = self._most_common(cards)
         if count == (4, 1):
             return [card for card in cards if card.valor == common[0]]
 
     def _three_oak(self, cards):
+        """
+        Checks if three of a kind exist.
+
+        Examples
+        --------
+        >>> Algo()._three_oak([Card("14H"), Card("10C"), Card("6D"), Card("6H"), 
+        ...     Card("6C")])
+        [6D, 6H, 6C]
+        """
         common, count = self._most_common(cards)
         if count == (3, 1):
             return [card for card in cards if card.valor == common[0]]
 
     def _two_pair(self, cards):
+        """
+        Checks if two pairs exist.
+
+        Examples
+        --------
+        >>> Algo()._two_pair([Card("14H"), Card("10C"), Card("10D"), Card("8D"), 
+        ...     Card("8H")])
+        [10C, 10D, 8D, 8H]
+        """
         common, count = self._most_common(cards)
         if count == (2, 2):
             return [card for card in cards if (card.valor == common[0] or
                     card.valor == common[1])]
     
-    def _pair(self, cards):
+    def _pair(self, cards : list) -> list:
+        """
+        Checks if a pair exist.
+
+        Examples
+        --------
+        >>> Algo()._pair([Card("14H"), Card("10C"), Card("8D"), Card("2H"), 
+        ...     Card("2C")])
+        [2H, 2C]
+        """
         common, count = self._most_common(cards)
         if count == (2, 1) or count == (2,):
             return [card for card in cards if card.valor == common[0]]
     
     def _most_common(self, cards):
         """
-        Get the two most common valor and suit, e.g.,
-        [(14, 2), (11, 1)]
+        Get the two most common valor and suit.
+
+        Examples
+        --------
+        >>> Algo()._most_common([Card("14H"), Card("14C"), Card("8D"), Card("7H"), 
+        ...     Card("2C")])
+        ((14, 8), (2, 1))
         """
         kinds = Counter([card.valor for card in cards])
-        return zip(*kinds.most_common(2))
+        common_cards, cards_count = zip(*kinds.most_common(2))
+        return common_cards, cards_count
 
 
     def _chens(self):
@@ -495,7 +601,6 @@ def main():
     algo = Algo()
 
     with timeit():
-        telegram.preflop_msg(10.4)
         best_hand, hand_str = algo._check_hand()
         rank = algo._check_rank(best_hand) 
         rank_strength = algo._check_rank_strength(rank)
