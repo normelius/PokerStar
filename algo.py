@@ -10,6 +10,7 @@ from operator import attrgetter, itemgetter
 import time
 from collections import Counter
 from itertools import groupby, combinations
+from ast import literal_eval
 
 import telegram
 
@@ -94,8 +95,14 @@ class Algo():
         self.all_cards = np.array(sorted(([str(value) + color for color 
             in colors for value in range(2, 15)])))
         self.board = None
-        self.ranks = pd.read_csv('Algo/ranks.csv', sep = '\t', 
-            encoding = 'utf-8', usecols = ["rank", "primes", "flush"])
+        self.tot_ranks = 7462
+
+        self.ranks = pd.read_csv('Algo/ranks_final.csv', sep = '\t', 
+            encoding = 'utf-8', usecols = ["rank", "abbreviation", 
+                "description", "C1", "C2", "C3", "C4", "C5", "hand", "primes",
+                "flush"])
+
+        self.ranks.hand = self.ranks.hand.apply(literal_eval)
         
 
     def analyze(self, board):
@@ -106,14 +113,20 @@ class Algo():
         num_open_cards = self.board.number_open_cards()
 
         if num_open_cards == 0:
-            telegram.preflop_msg(self._chens())
+            chens = self._chens()
+            telegram.preflop_msg(chens)
         
         if num_open_cards >= 3:
             all_cards = self.board.player.cards + self.board.open_cards
             best_hand, hand_str = self._best_hand(all_cards)
-            rank = self._check_rank(best_hand) 
-            rank_strength = self._check_rank_strength(rank)
-            telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
+            player_rank = self._check_rank(best_hand) 
+            rank_strength = self._check_rank_strength(player_rank)
+
+            opponent_hands = algo._get_opponent_hands(self.board.open_cards)
+            opponent_outs, numb_outs = algo._get_opponent_outs(
+                opponent_hands, player_rank)
+
+            #telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
 
     
     def _longest_consecutive(self, valors : list) -> list:
@@ -162,7 +175,6 @@ class Algo():
         """
         Check the current best possible hand available by comparing the users
         current hand and all cards at the table, compared to all possible hands.
-        It uses two different hashtables, one for non-flush and one for flush.
         The idea is that each valor have a different prime number associated
         to it, meaning the hands product will always be different, except 
         for flushes.
@@ -195,16 +207,13 @@ class Algo():
         ([12H, 11H, 10H, 9H, 8H], 'Straight flush')
         """
         
-        # Sort in decreasing order, so strongest first.
-        cards.sort(key = lambda x: x.valor, reverse = True)
-        flush = False
+        # Sort in decreasing order, so strongest first (highest valor).
+        cards.sort(key = lambda card: card.valor, reverse = True)
         
         if hand := self._royal_straight_flush(cards):
-            flush = True
             hand_str = "Royal straight flush"
 
         elif hand := self._straight_flush(cards):
-            flush = True
             hand_str = "Straight flush"
 
         elif hand := self._four_oak(cards):
@@ -214,7 +223,6 @@ class Algo():
             hand_str = "Full house"
         
         elif hand := self._flush(cards):
-            flush = True
             hand_str = "Flush"
     
         elif hand := self._straight(cards):
@@ -262,7 +270,7 @@ class Algo():
         >>> Algo()._check_rank_strength(7462/2)
         50.0
         """ 
-        rank = 7462 - rank
+        rank = self.tot_ranks - rank
         ranks = np.arange(7462, 0, -1)
         return round(np.count_nonzero(ranks <= rank) / len(ranks) * 100, 2)
 
@@ -331,7 +339,7 @@ class Algo():
         return False
 
 
-    def _prime_product(self, best_hand : list):
+    def _prime_product(self, best_hand: list) -> int:
         """
         Calculates the prime product of the best hand.
 
@@ -344,8 +352,7 @@ class Algo():
         -------
         prime_product : int
             The prime product of the cards. Each valor is represented by a 
-            prime, hence the product will all be different, except for the 
-            flushes.
+            prime, loops through all cards and creates the product.
 
         Examples
         --------
@@ -596,6 +603,116 @@ class Algo():
             score += 1
 
         return score
+    
+
+
+    def _get_opponent_hands(self, deck_cards: list):
+        """
+        Calculates all possible hands the opponents can have after
+        the flop, river and turn. Since we doesn't know what 2-cards the 
+        opponent have, but we know that a minimum of three cards at the table
+        will be used for its hand, we brute force all possible hands the 
+        opponent could have.
+
+        Parameters
+        ----------
+        deck_cards: list
+            A list containing the open cards at the table.
+
+        Returns
+        -------
+        hands : pd.DataFrame
+            A dataframe containing the hands the opponents can have.
+
+        numb_hands : int
+            Number of hands available that the opponents can have.
+        """
+        
+        # We know each opponent will use at least three of the cards for its
+        # hand, thus we check all possible combinations of three.
+        deck_card_combinations = [list(x) for x in list(combinations(
+            deck_cards, 3))]
+        
+        hands = pd.DataFrame()
+        
+        for combination in deck_card_combinations:
+            open_valors = [card.valor for card in combination]
+            is_flush = all(card.suit == combination[0].suit for card 
+                    in combination)
+
+            out_ranks = self.ranks[self.ranks.hand.apply(
+                lambda hand: all(True if open_valors.count(item) <= hand.count(item)
+                else False for item in open_valors))]
+
+            # Flush/not flush can be same hand (valors), hence we check.
+            out_ranks = out_ranks[out_ranks.flush == is_flush]
+
+            hands = hands.append(out_ranks, ignore_index = True)
+        
+        hands = hands.sort_values("rank", ignore_index = True)
+
+        # In case there are duplicates during the loop.
+        hands = hands.drop_duplicates(subset = ["rank"])
+        numb_hands = len(hands.index)
+        return hands, numb_hands
+
+    
+    def _get_opponent_outs(self, opponent_hands: DataFrame, player_rank):
+        """
+        Get the outs the opponent current have available, as well as the
+        total number of outs. With out I mean the number of hands that 
+        are currently better than the one the player have.
+
+        Parameters
+        ----------
+        opponent_hands: pd.DataFrame
+            A dataframe containing the possible hands the opponent can have.
+        player_rank: int
+            The rank of the players' current best hand.
+
+        Returns
+        -------
+        outs : pd.DataFrame
+            Dataframe containing all possible outs.
+
+        number_outs : int
+            Number of outs the opponent have.
+        """
+        outs = opponent_hands.loc[opponent_hands["rank"] < player_rank]
+        number_outs = len(outs.index)
+        return outs, number_outs
+
+
+        
+    def _hand_percentage(self, number_hands: int, number_outs: int) -> float:
+        """
+        Returns how many percentage of the total available hands
+        are better than the players' current hand.
+
+        Parameters
+        ----------
+        number_hands : int
+            Total number of hands the opponent currently can have.
+
+        number_outs : int
+            Total number of outs, i.e., better hand than the player.
+
+        Returns
+        -------
+        pct : float
+            Returns how many percentage of the possible hands that are
+            better than the players current hand.
+
+        Examples
+        --------
+        >>> Algo()._hand_percentage(100, 20)
+        20.0
+        >>> Algo()._hand_percentage(100, 0)
+        0.0
+        >>> Algo()._hand_percentage(100, 75)
+        75.0
+        """
+        return round((number_outs / number_hands) * 100.0, 1)
 
 
 def main():
@@ -605,17 +722,27 @@ def main():
     algo = Algo()
 
     with timeit():
-        cards = [Card("14H"), Card("13H"), Card("12H"), Card("11H"),
-            Card("10H"), Card("10C"), Card("13C")]
-        best_hand, hand_str = algo._best_hand(cards)
-        rank = algo._check_rank(best_hand) 
-        rank_strength = algo._check_rank_strength(rank)
+        player_cards = [Card("13H"), Card("13D")]
+        deck_cards = [Card("3H"), Card("14H"), Card("8H"), Card("11D")]
+        all_cards = player_cards + deck_cards
+
+        best_hand, hand_str = algo._best_hand(all_cards)
+        player_rank = algo._check_rank(best_hand) 
+        rank_strength = algo._check_rank_strength(player_rank)
+
+        opponent_hands, number_hands = algo._get_opponent_hands(deck_cards)
+        opponent_outs, number_outs = algo._get_opponent_outs(
+                opponent_hands, player_rank)
+
+        print("Number of hands: {}".format(number_hands))
+        print("Number of outs: {}".format(number_outs))
+        print("Hand percentage: {}".format(algo._hand_percentage(number_hands,
+            number_outs)))
+
+
         #telegram.flop_msg(best_hand, hand_str, rank, rank_strength)
 
-
-
-
-
+                
 if __name__ == '__main__':
     main()
 
