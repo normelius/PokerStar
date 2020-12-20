@@ -11,8 +11,9 @@ import time
 from collections import Counter
 from itertools import groupby, combinations
 from ast import literal_eval
+import pkg_resources
 
-from message import Message
+from .message import Message
 
 PRIMES = {
         2: 2,
@@ -96,7 +97,8 @@ class Algo():
         self.board = None
         self.tot_ranks = 7462
 
-        self.ranks = pd.read_csv('Algo/ranks_final.csv', sep = '\t', 
+        stream = pkg_resources.resource_stream(__name__, 'algo/ranks_final.csv')
+        self.ranks = pd.read_csv(stream, sep = '\t', 
             encoding = 'utf-8', usecols = ["rank", "abbreviation", 
                 "description", "C1", "C2", "C3", "C4", "C5", "hand", "primes",
                 "flush"])
