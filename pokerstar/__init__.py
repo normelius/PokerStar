@@ -1,2 +1,3 @@
 
-from .algo import Algo, Card
+from .algo import Algo
+from .deck import Card, Deck

@@ -14,22 +14,7 @@ from ast import literal_eval
 import pkg_resources
 
 from .message import Message
-
-PRIMES = {
-        2: 2,
-        3: 3,
-        4: 5,
-        5: 7,
-        6: 11,
-        7: 13,
-        8: 17,
-        9: 19,
-        10: 23,
-        11: 29,
-        12: 31,
-        13: 37,
-        14: 41}
-
+from .deck import Card
 
 @contextlib.contextmanager
 def timeit(title = ""):
@@ -38,55 +23,6 @@ def timeit(title = ""):
     elapsed = time.time() - tstart
     print(title, elapsed)
 
-
-class Card():
-    def __init__(self, card_string : str):
-        self.valor =  int(''.join(x for x in card_string if x.isdigit()))
-        self.suit = card_string[-1]
-        self.prime = PRIMES[self.valor]
-    
-    def __str__(self):
-        return self.card_string()
-    
-    def __repr__(self):
-        return self.card_string()
-
-    def __eq__(self, obj : Card):
-        if self.valor == obj.valor:
-            return True
-
-        return False
-    
-    def __gt__(self, obj):
-        if self.valor > obj.valor:
-            return True
-
-        return False
-
-    def __lt__(self, obj):
-        if  self.valor < obj.valor:
-            return True
-
-        return false
-
-    def card_string(self) -> str:
-        return str(self.valor) + self.suit
-
-    def same_suit(self, card) -> bool:
-        if self.suit == card.suit:
-            return True
-
-        return False
-
-    def valor_difference(self, card) -> int:
-        """
-        Returns the gap between two cards, e.g., 11D and 5H have gap 5. 
-        """
-        diff = abs(self.valor - card.valor)
-        if diff == 0:
-            return diff
-
-        return diff - 1
 
 
 class Algo():
@@ -201,7 +137,7 @@ class Algo():
 
         for k, g in groupby(enumerate(valors), lambda ix : ix[0] - ix[1]):
             vals.append(list(map(itemgetter(1), g)))
-        
+
         consecutive = sorted(max(sorted(vals, reverse = True), key = len), 
                 reverse = True)
 
@@ -347,7 +283,7 @@ class Algo():
 
         """
         prime_product = self._prime_product(best_hand)
-        if self._is_flush(best_hand):
+        if flush := self._is_flush(best_hand):
             return self.ranks.loc[(self.ranks["primes"] == prime_product) &
                 (self.ranks["flush"] == True)]["rank"].values[0]
         
@@ -508,10 +444,14 @@ class Algo():
         valors = [card.valor for card in cards]
         consecutive_valors = self._longest_consecutive(valors)
         if len(consecutive_valors) >= 5:
-            consecutive_suits = [card.suit for card in cards if 
-                card.valor in consecutive_valors]
-            return [card for card in cards if (card.valor in 
-                consecutive_valors and card.suit in consecutive_suits)]
+            val = list()
+            for valor in consecutive_valors:
+                for card in cards:
+                    if card.valor == valor:
+                        val.append(card)
+                        break
+            
+            return val
 
     def _full_house(self, cards):
         """
@@ -539,7 +479,7 @@ class Algo():
         [6S, 6D, 6H, 6C]
         """
         common, count = self._most_common(cards)
-        if count == (4, 1):
+        if count == (4, 1) or count == (4, 2) or count == (4, 3):
             return [card for card in cards if card.valor == common[0]]
 
     def _three_oak(self, cards):
@@ -553,7 +493,7 @@ class Algo():
         [6D, 6H, 6C]
         """
         common, count = self._most_common(cards)
-        if count == (3, 1):
+        if count == (3, 1) or count == (3, 3):
             return [card for card in cards if card.valor == common[0]]
 
     def _two_pair(self, cards):
@@ -797,8 +737,8 @@ def main():
                 "opponent_hand_pct": opponent_hand_pct}
                 
 
-        algo.message.compose(components)
-        algo.message.send()
+        #algo.message.compose(components)
+        #algo.message.send()
 
                 
 if __name__ == '__main__':
