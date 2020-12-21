@@ -38,8 +38,8 @@ So, what can we do at the moment?
 
 # What is the best current hand we have?
 >>> best_hand, best_hand_str = algo.best_hand(all_cards)
->>> print(best_hand)
-[13H, 13C, 14H, 11D, 8H], "One Pair"
+>>> print(best_hand, best_hand_str)
+[13H, 13C, 14H, 11D, 8H] "One Pair"
 
 # What score does our best hand have? This is based on the fact that there exist 7462 
 # unique hands in total.
@@ -47,7 +47,8 @@ So, what can we do at the moment?
 >>> print(rank)
 3558
 
-# How strong is this rank compared to the other possible ranks?
+# How strong is this rank compared to the other possible ranks? This shows how many % 
+# our hand can beat compared to the other 7462 unique hands.
 >>> rank_strength = algo.rank_strength(rank)
 >>> print(rank_strength)
 52.32
