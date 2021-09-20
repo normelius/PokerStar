@@ -1,6 +1,5 @@
 # PokerStar 2000
-
-World's best pokerbot.
+Library to continuously analyze PokerStar tables that you currently are playing andreceive live info about player and opponent cards, e.g., best possible hand, ranking, etc.. It works by fetching the specified board window and in realtime categorize which cards the player have by using machine learning with pre-trained models of all the cards.
 
 ## Installation
 
